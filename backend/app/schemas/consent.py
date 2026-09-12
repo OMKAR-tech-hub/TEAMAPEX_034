@@ -46,5 +46,4 @@ class BankViewResponse(BaseModel):
     credit_tier: Optional[str] = None
     component_scores: Optional[dict] = None
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

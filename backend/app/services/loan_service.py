@@ -55,7 +55,7 @@ def psl_tag(loan: LoanApplication, farmer: Farmer) -> tuple[str, bool]:
 
 
 def loan_to_dict(db: Session, loan: LoanApplication) -> dict:
-    farmer = db.query(Farmer).get(loan.farmer_id)
+    farmer = db.get(Farmer, loan.farmer_id)
     emi = annual_emi(loan.principal, loan.annual_interest_rate, loan.tenure_months)
     total_payable = round(emi * loan.tenure_months, 2)
     return {

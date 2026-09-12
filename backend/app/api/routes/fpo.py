@@ -10,6 +10,7 @@ from app.models.fpo_verification import FPOVerification
 from app.models.user import Role, User
 from app.api.deps import require_roles
 from app.schemas.fpo import VerificationCreate, VerificationResponse, VerificationUpdate
+from app.schemas.risk import VouchCreateRequest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -92,3 +93,15 @@ def update_verification(
     db.commit()
     db.refresh(verification)
     return verification
+
+
+@router.post("/vouch", response_model=dict)
+@router.post("/vouches", response_model=dict)
+def fpo_vouch(
+    payload: VouchCreateRequest,
+    user: User = Depends(require_roles(Role.FPO)),
+    db: Session = Depends(get_db),
+):
+    from app.api.routes.risk import create_vouch
+
+    return create_vouch(payload, user=user, db=db)

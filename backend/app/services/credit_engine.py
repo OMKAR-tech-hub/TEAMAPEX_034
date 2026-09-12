@@ -97,7 +97,8 @@ def _repayment_score(coverage: Optional[float]) -> float:
 
 
 def _stability_score(farmer: Farmer) -> float:
-    days = (datetime.utcnow() - farmer.created_at).days
+    created_at = farmer.created_at or datetime.utcnow()
+    days = (datetime.utcnow() - created_at).days
     if days < 30:
         return 40.0
     if days < 180:
@@ -193,7 +194,7 @@ def _agri_risk_proxy(farmer: Farmer) -> float:
         base -= 8.0
     if farmer.insurance_sum_assured and farmer.insurance_sum_assured > 0:
         base -= 5.0
-    if getattr(farmer, "farm_experience_years", 0) or 0 >= 5:
+    if (getattr(farmer, "farm_experience_years", 0) or 0) >= 5:
         base -= 7.0
     return max(0.0, min(100.0, base))
 

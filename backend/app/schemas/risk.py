@@ -49,3 +49,9 @@ class VouchCreateRequest(BaseModel):
     loan_application_id: Optional[int] = None
     guarantee_style: str = Field(default="first_loss", pattern="^(joint_review|first_loss)$")
     notes: Optional[str] = None
+    score: Optional[int] = Field(default=None, ge=1, le=5)
+    statement: Optional[str] = None
+    season: Optional[str] = None
+    year: Optional[int] = None
+    fpo_id: Optional[int] = None
+    attestor_user_id: Optional[int] = None

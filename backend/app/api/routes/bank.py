@@ -79,6 +79,70 @@ def list_consented_farmers(
     return result
 
 
+@router.get("/pipeline", response_model=dict)
+def origination_pipeline(
+    psl_category: str | None = None,
+    consent_active_only: bool = True,
+    page: int = 1,
+    size: int = 50,
+    user: User = Depends(require_roles(Role.BANK)),
+    db: Session = Depends(get_db),
+):
+    from app.services.bank_view import _mask_value
+    from app.services.loan_service import psl_tag
+
+    consents_query = db.query(ConsentLog).filter(ConsentLog.bank_user_id == user.id)
+    if consent_active_only:
+        consents_query = consents_query.filter(ConsentLog.granted.is_(True))
+
+    items = []
+    for consent in consents_query.order_by(ConsentLog.id.desc()).all():
+        farmer = db.query(Farmer).filter(Farmer.id == consent.farmer_id).first()
+        if farmer is None:
+            continue
+        passport = _latest_passport(db, farmer.id)
+        allowed = set(consent.attributes or [])
+        masked = set(consent.masked_attributes or [])
+
+        # PSL Determination
+        dummy_loan = LoanApplication(principal=passport.safe_credit_limit if passport else 100000.0)
+        category, eligible = psl_tag(dummy_loan, farmer)
+        if psl_category and psl_category.lower() not in category.lower():
+            continue
+
+        raw_mobile = farmer.mobile if "mobile" in allowed else None
+        display_mobile = _mask_value("mobile", raw_mobile) if ("mobile" in masked or "mobile" not in allowed) else raw_mobile
+
+        raw_name = farmer.name if "name" in allowed else None
+        display_name = _mask_value("name", raw_name) if ("name" in masked or "name" not in allowed) else raw_name
+
+        items.append({
+            "farmer_ref": farmer.farmer_id,
+            "farmer_name": display_name,
+            "village": farmer.village if "village" in allowed else "••••••",
+            "mobile": display_mobile,
+            "safe_credit_limit": passport.safe_credit_limit if passport and "passport" in allowed else None,
+            "credit_tier": passport.credit_tier if passport and "passport" in allowed else None,
+            "repayment_coverage": passport.repayment_coverage if passport and "passport" in allowed else None,
+            "psl_category": category,
+            "psl_eligible": eligible,
+            "consent_id": consent.id,
+            "consent_status": "active" if consent.granted else "revoked",
+        })
+
+    start = (max(1, page) - 1) * size
+    paginated_items = items[start: start + size]
+
+    return {
+        "ok": True,
+        "data": {
+            "items": paginated_items,
+            "count": len(items),
+            "pagination": {"page": page, "size": size},
+        },
+    }
+
+
 @router.get("/farmers/{farmer_id}/view", response_model=BankViewResponse)
 def bank_view(
     farmer_id: str,

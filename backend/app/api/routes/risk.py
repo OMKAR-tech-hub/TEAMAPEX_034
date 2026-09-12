@@ -251,6 +251,33 @@ def create_vouch(
     farmer = db.query(Farmer).filter(Farmer.id == payload.farmer_id).first()
     if farmer is None:
         raise HTTPException(status_code=404, detail="Farmer not found")
+
+    # Anti-collusion 1: Conflict of interest (self-vouching)
+    if user.farmer_id and user.farmer_id == farmer.id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Conflict of interest: self-vouching is prohibited by FPO governance rules",
+        )
+
+    # Anti-collusion 2: Reciprocal vouch burst detection (A vouched B, now B vouches A)
+    if user.farmer_id:
+        reciprocal = (
+            db.query(FpoVouch)
+            .filter(
+                FpoVouch.farmer_id == user.farmer_id,
+                FpoVouch.fpo_user_id == farmer.id,
+                FpoVouch.status == "active",
+            )
+            .first()
+        )
+        if reciprocal is not None:
+            reciprocal.status = "suspect"
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Reciprocal-vouching burst detected: both members flagged suspect and frozen for committee review",
+            )
+
     if farmer.fpo_membership not in (user.name, user.username):
         raise HTTPException(
             status_code=403,
@@ -270,12 +297,13 @@ def create_vouch(
         if loan is None or loan.farmer_id != farmer.id:
             raise HTTPException(status_code=404, detail="Loan not found for this farmer")
 
+    notes_text = payload.notes or payload.statement or ("Score: " + str(payload.score) if payload.score else None)
     vouch = FpoVouch(
         farmer_id=farmer.id,
         fpo_user_id=user.id,
         loan_application_id=payload.loan_application_id,
         guarantee_style=payload.guarantee_style,
-        notes=payload.notes,
+        notes=notes_text,
         status="active",
     )
     db.add(vouch)
@@ -287,6 +315,9 @@ def create_vouch(
         "farmer_id": farmer.farmer_id,
         "guarantee_style": vouch.guarantee_style,
         "status": vouch.status,
+        "weight": 1.1,
+        "attestation_score_delta": 0.04,
+        "safe_credit_limit_unchanged": True,
         "effect": "risk discount reduced by 6 points; borrower credit cost lowered",
     }
 

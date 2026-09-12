@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("", response_model=ConsentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/grant", response_model=ConsentResponse, status_code=status.HTTP_201_CREATED)
 def grant_consent(
     payload: ConsentCreate,
     user: User = Depends(get_current_user),
@@ -125,3 +126,26 @@ def revoke_consent(
     consent.revoked_at = datetime.utcnow()
     db.commit()
     return None
+
+
+@router.post("/revoke", response_model=dict)
+def revoke_consent_post(
+    payload: dict,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    cid = payload.get("consent_id") or payload.get("id")
+    if cid is None:
+        raise HTTPException(status_code=400, detail="consent_id is required")
+    consent = db.query(ConsentLog).filter(ConsentLog.id == int(cid)).first()
+    if consent is None:
+        raise HTTPException(status_code=404, detail="Consent not found")
+    if user.role == Role.FARMER.value and consent.farmer_id != user.farmer_id:
+        raise HTTPException(status_code=403, detail="Not your consent grant")
+    if user.role == Role.BANK.value and consent.bank_user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your consent grant")
+
+    consent.granted = False
+    consent.revoked_at = datetime.utcnow()
+    db.commit()
+    return {"ok": True, "message": f"Consent {consent.id} revoked successfully"}

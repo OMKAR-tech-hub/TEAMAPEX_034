@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../api'
 
 const AuthContext = createContext(null)
@@ -12,6 +13,21 @@ export function AuthProvider({ children }) {
       return null
     }
   })
+  const navigate = useNavigate()
+
+  // Listen for forced-logout events emitted by api.js when any
+  // non-auth request returns 401 (expired / invalid token).
+  // Using a DOM event keeps api.js free of React dependencies and
+  // avoids hard window.location.href reloads that break re-login.
+  useEffect(() => {
+    const handleForceLogout = () => {
+      setToken(null)
+      setUser(null)
+      navigate('/login', { replace: true })
+    }
+    window.addEventListener('auth:logout', handleForceLogout)
+    return () => window.removeEventListener('auth:logout', handleForceLogout)
+  }, [navigate])
 
   const applySession = (data) => {
     localStorage.setItem('token', data.access_token)
@@ -27,15 +43,13 @@ export function AuthProvider({ children }) {
   }
 
   const registerFarmer = async (payload) => {
-    const { data } = await api.post('/auth/register/farmer', payload)
-    await login(payload.mobile, payload.password)
-    return data
+    await api.post('/auth/register/farmer', payload)
+    return login(payload.mobile, payload.password)
   }
 
   const registerOrg = async (role, payload) => {
-    const { data } = await api.post(`/auth/register/${role}`, payload)
-    await login(payload.username, payload.password)
-    return data
+    await api.post(`/auth/register/${role}`, payload)
+    return login(payload.username, payload.password)
   }
 
   const logout = () => {
@@ -43,6 +57,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('user')
     setToken(null)
     setUser(null)
+    navigate('/login', { replace: true })
   }
 
   return (
