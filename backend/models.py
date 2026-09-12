@@ -5,30 +5,59 @@ from backend.database import Base
 
 
 class Farmer(Base):
-    """Farmer model representing agricultural producers"""
+    """Farmer model representing agricultural producers.
+
+    Basic identity only. Sensitive agricultural information lives in
+    AgriculturalProfile to keep identity data lightweight and portable.
+    """
     __tablename__ = "farmers"
-    
+
     id = Column(Integer, primary_key=True, index=True)
+    farmer_id = Column(String(50), unique=True, index=True, nullable=False)
     name = Column(String(255), nullable=False)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    phone = Column(String(20), nullable=False)
-    address = Column(Text, nullable=True)
-    farm_size = Column(Float, nullable=True)  # in acres
-    crops = Column(Text, nullable=True)  # JSON string of crops
+    mobile = Column(String(15), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    village = Column(String(100), nullable=False)
+    district = Column(String(100), nullable=False)
+    state = Column(String(100), nullable=False)
+    profile_photo = Column(String(500), nullable=True)
     fpo_membership = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
+    agricultural_profile = relationship(
+        "AgriculturalProfile",
+        back_populates="farmer",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
     production_records = relationship("ProductionRecord", back_populates="farmer", cascade="all, delete-orphan")
     credit_applications = relationship("CreditApplication", back_populates="farmer", cascade="all, delete-orphan")
     verifications = relationship("Verification", back_populates="farmer", cascade="all, delete-orphan")
 
 
+class AgriculturalProfile(Base):
+    """Sensitive agricultural information, stored separately from identity."""
+    __tablename__ = "agricultural_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farmer_id = Column(Integer, ForeignKey("farmers.id"), nullable=False)
+    farm_size = Column(Float, nullable=True)  # in acres
+    crops = Column(Text, nullable=True)  # JSON string of crops
+    land_type = Column(String(100), nullable=True)  # owned, leased, shared
+    irrigation = Column(String(100), nullable=True)  # rainfed, borewell, canal, etc.
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    farmer = relationship("Farmer", back_populates="agricultural_profile")
+
+
 class ProductionRecord(Base):
     """Production record for tracking farmer's agricultural output"""
     __tablename__ = "production_records"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     farmer_id = Column(Integer, ForeignKey("farmers.id"), nullable=False)
     crop_type = Column(String(100), nullable=False)
@@ -37,7 +66,7 @@ class ProductionRecord(Base):
     year = Column(Integer, nullable=False)
     verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     farmer = relationship("Farmer", back_populates="production_records")
 
@@ -45,7 +74,7 @@ class ProductionRecord(Base):
 class CreditApplication(Base):
     """Credit application model for loan requests"""
     __tablename__ = "credit_applications"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     farmer_id = Column(Integer, ForeignKey("farmers.id"), nullable=False)
     amount_requested = Column(Float, nullable=False)
@@ -55,7 +84,7 @@ class CreditApplication(Base):
     application_date = Column(DateTime, default=datetime.utcnow)
     decision_date = Column(DateTime, nullable=True)
     notes = Column(Text, nullable=True)
-    
+
     # Relationships
     farmer = relationship("Farmer", back_populates="credit_applications")
 
@@ -63,7 +92,7 @@ class CreditApplication(Base):
 class Verification(Base):
     """Verification records for farmer data validation"""
     __tablename__ = "verifications"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     farmer_id = Column(Integer, ForeignKey("farmers.id"), nullable=False)
     verification_type = Column(String(100), nullable=False)  # identity, production, fpo_membership
@@ -72,6 +101,6 @@ class Verification(Base):
     verification_date = Column(DateTime, nullable=True)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     farmer = relationship("Farmer", back_populates="verifications")

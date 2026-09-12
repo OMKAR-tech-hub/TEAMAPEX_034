@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 
@@ -6,35 +6,71 @@ from datetime import datetime
 # Farmer Schemas
 class FarmerBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    email: EmailStr
-    phone: str = Field(..., min_length=10, max_length=20)
-    address: Optional[str] = None
-    farm_size: Optional[float] = Field(None, gt=0)
-    crops: Optional[str] = None
-    fpo_membership: Optional[str] = None
+    mobile: str = Field(..., pattern=r"^\d{10}$")
+    village: str = Field(..., min_length=1, max_length=100)
+    district: str = Field(..., min_length=1, max_length=100)
+    state: str = Field(..., min_length=1, max_length=100)
+    profile_photo: Optional[str] = Field(None, max_length=500)
+    fpo_membership: Optional[str] = Field(None, max_length=255)
 
 
 class FarmerCreate(FarmerBase):
-    pass
+    password: str = Field(..., min_length=6, max_length=128)
+    farmer_id: Optional[str] = Field(None, max_length=50)
 
 
 class FarmerUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
-    email: Optional[EmailStr] = None
-    phone: Optional[str] = Field(None, min_length=10, max_length=20)
-    address: Optional[str] = None
-    farm_size: Optional[float] = Field(None, gt=0)
-    crops: Optional[str] = None
-    fpo_membership: Optional[str] = None
+    mobile: Optional[str] = Field(None, pattern=r"^\d{10}$")
+    village: Optional[str] = Field(None, min_length=1, max_length=100)
+    district: Optional[str] = Field(None, min_length=1, max_length=100)
+    state: Optional[str] = Field(None, min_length=1, max_length=100)
+    profile_photo: Optional[str] = Field(None, max_length=500)
+    fpo_membership: Optional[str] = Field(None, max_length=255)
 
 
 class FarmerResponse(FarmerBase):
     id: int
+    farmer_id: str
     created_at: datetime
     updated_at: datetime
-    
+
     class Config:
         from_attributes = True
+
+
+# Agricultural Profile Schemas
+class AgriculturalProfileBase(BaseModel):
+    farm_size: Optional[float] = Field(None, gt=0)
+    crops: Optional[str] = None
+    land_type: Optional[str] = Field(None, max_length=100)
+    irrigation: Optional[str] = Field(None, max_length=100)
+
+
+class AgriculturalProfileUpdate(AgriculturalProfileBase):
+    pass
+
+
+class AgriculturalProfileResponse(AgriculturalProfileBase):
+    id: int
+    farmer_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Auth Schemas
+class LoginRequest(BaseModel):
+    mobile: str = Field(..., pattern=r"^\d{10}$")
+    password: str = Field(..., min_length=6, max_length=128)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    farmer: FarmerResponse
 
 
 # Production Record Schemas
@@ -54,7 +90,7 @@ class ProductionRecordResponse(ProductionRecordBase):
     farmer_id: int
     verified: bool
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 
@@ -82,7 +118,7 @@ class CreditApplicationResponse(CreditApplicationBase):
     application_date: datetime
     decision_date: Optional[datetime] = None
     notes: Optional[str] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -110,7 +146,7 @@ class VerificationResponse(VerificationBase):
     verified_by: Optional[str] = None
     verification_date: Optional[datetime] = None
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 

@@ -1,11 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
+import os
 
 from backend.config import settings
-from backend.routers import farmers, credit, verification
+from backend.routers import farmers, credit, verification, auth
 from backend.database import engine, Base
+
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +35,8 @@ app = FastAPI(
     title="Farmer Trust Passport API",
     description="Portable Agricultural Economic Identity for transparent credit access",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    redirect_slashes=False,
 )
 
 # CORS configuration
@@ -45,8 +50,13 @@ app.add_middleware(
 
 # Include routers
 app.include_router(farmers.router, prefix="/api/v1/farmers", tags=["Farmers"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(credit.router, prefix="/api/v1/credit", tags=["Credit"])
 app.include_router(verification.router, prefix="/api/v1/verification", tags=["Verification"])
+
+# Serve uploaded profile photos
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 @app.get("/")
