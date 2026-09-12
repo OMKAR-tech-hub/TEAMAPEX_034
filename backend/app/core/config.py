@@ -1,9 +1,20 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 
+# Resolve local configuration from the backend directory, not the directory
+# from which Uvicorn happens to be started.
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=True)
+    model_config = SettingsConfigDict(
+        env_file=BACKEND_DIR / ".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
 
     APP_NAME: str = "Kisan Setu"
     APP_VERSION: str = "1.0.0"
