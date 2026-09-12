@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from backend.config import settings
-from backend.routers import farmers, credit, verification
+from backend.routers import auth, farmers, credit, verification, farms, fpo, passport, consent, lender, ml_router
 from backend.database import engine, Base
 
 # Configure logging
@@ -18,20 +18,21 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
-    # Startup
-    logger.info("Starting Farmer Trust Passport application")
+    logger.info("Starting KisanSetu — Farmer Trust Passport API")
     Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created")
+    logger.info("Database tables created/verified")
     yield
-    # Shutdown
-    logger.info("Shutting down application")
+    logger.info("Shutting down KisanSetu API")
 
 
 app = FastAPI(
-    title="Farmer Trust Passport API",
-    description="Portable Agricultural Economic Identity for transparent credit access",
-    version="1.0.0",
-    lifespan=lifespan
+    title="KisanSetu — Farmer Trust Passport API",
+    description=(
+        "Portable Agricultural Economic Identity for transparent credit access. "
+        "Farmer owns their data. FPO verifies. Lender decides. KisanSetu explains."
+    ),
+    version="1.0.0-mvp",
+    lifespan=lifespan,
 )
 
 # CORS configuration
@@ -43,23 +44,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(farmers.router, prefix="/api/v1/farmers", tags=["Farmers"])
-app.include_router(credit.router, prefix="/api/v1/credit", tags=["Credit"])
+# ─────────────────────────────────────────────
+# Routers
+# ─────────────────────────────────────────────
+app.include_router(auth.router,         prefix="/api/v1/auth",         tags=["Auth"])
+app.include_router(farmers.router,      prefix="/api/v1/farmers",      tags=["Farmers"])
+app.include_router(farms.router,        prefix="/api/v1/farmers",      tags=["Farms & Records"])
+app.include_router(credit.router,       prefix="/api/v1/credit",       tags=["Credit Applications"])
 app.include_router(verification.router, prefix="/api/v1/verification", tags=["Verification"])
+app.include_router(fpo.router,          prefix="/api/v1/fpo",          tags=["FPO"])
+app.include_router(passport.router,     prefix="/api/v1/passport",     tags=["Trust Passport"])
+app.include_router(consent.router,      prefix="/api/v1/consent",      tags=["Consent & Data Ownership"])
+app.include_router(lender.router,       prefix="/api/v1/lender",       tags=["Lender Portal"])
+app.include_router(ml_router.router,    prefix="/api/v1/ml",            tags=["ML Intelligence"])
 
 
 @app.get("/")
 async def root():
-    """Root endpoint"""
     return {
-        "message": "Farmer Trust Passport API",
-        "version": "1.0.0",
-        "status": "operational"
+        "message": "KisanSetu — Farmer Trust Passport API",
+        "version": "1.0.0-mvp",
+        "status": "operational",
+        "docs": "/docs",
+        "health": "/health",
     }
 
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "service": "KisanSetu Trust Passport API",
+        "version": "1.0.0-mvp",
+    }

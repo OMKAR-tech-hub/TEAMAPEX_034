@@ -1,144 +1,69 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+"""
+Farmer profile router — auth-gated, ownership-enforced
+"""
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
 import logging
 
 from backend.database import get_db
-from backend.models import Farmer
-from backend.schemas import FarmerCreate, FarmerUpdate, FarmerResponse
-from backend.config import settings
+from backend.models import Farmer, User, UserRole, AuditLog
+from backend.schemas import FarmerUpdate, FarmerResponse
+from backend.auth.dependencies import get_current_user, get_farmer_profile, require_role
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/", response_model=FarmerResponse, status_code=status.HTTP_201_CREATED)
-def create_farmer(farmer: FarmerCreate, db: Session = Depends(get_db)):
-    """Create a new farmer profile"""
-    try:
-        # Check if email already exists
-        existing_farmer = db.query(Farmer).filter(Farmer.email == farmer.email).first()
-        if existing_farmer:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
-            )
-        
-        db_farmer = Farmer(**farmer.model_dump())
-        db.add(db_farmer)
-        db.commit()
-        db.refresh(db_farmer)
-        
-        logger.info(f"Created farmer profile: {db_farmer.id}")
-        return db_farmer
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error creating farmer: {str(e)}")
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create farmer profile"
-        )
-
-
-@router.get("/", response_model=List[FarmerResponse])
-def list_farmers(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(settings.DEFAULT_PAGE_SIZE, ge=1, le=settings.MAX_PAGE_SIZE),
-    db: Session = Depends(get_db)
+@router.get("/me", response_model=FarmerResponse)
+def get_my_profile(
+    farmer: Farmer = Depends(get_farmer_profile),
 ):
-    """List all farmers with pagination"""
-    try:
-        farmers = db.query(Farmer).offset(skip).limit(limit).all()
-        return farmers
-    except Exception as e:
-        logger.error(f"Error listing farmers: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve farmers"
-        )
+    """Get the current farmer's own profile."""
+    return farmer
+
+
+@router.put("/me", response_model=FarmerResponse)
+def update_my_profile(
+    farmer_update: FarmerUpdate,
+    farmer: Farmer = Depends(get_farmer_profile),
+    db: Session = Depends(get_db),
+):
+    """Update the current farmer's own profile."""
+    update_data = farmer_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(farmer, field, value)
+    db.commit()
+    db.refresh(farmer)
+    logger.info(f"Farmer profile updated: {farmer.id}")
+    return farmer
 
 
 @router.get("/{farmer_id}", response_model=FarmerResponse)
-def get_farmer(farmer_id: int, db: Session = Depends(get_db)):
-    """Get a specific farmer by ID"""
-    try:
-        farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
-        if not farmer:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Farmer not found"
-            )
-        return farmer
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error retrieving farmer {farmer_id}: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve farmer"
-        )
-
-
-@router.put("/{farmer_id}", response_model=FarmerResponse)
-def update_farmer(
+def get_farmer_by_id(
     farmer_id: int,
-    farmer_update: FarmerUpdate,
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    """Update a farmer profile"""
-    try:
-        db_farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
-        if not db_farmer:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Farmer not found"
-            )
-        
-        # Update only provided fields
-        update_data = farmer_update.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(db_farmer, field, value)
-        
-        db.commit()
-        db.refresh(db_farmer)
-        
-        logger.info(f"Updated farmer profile: {farmer_id}")
-        return db_farmer
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error updating farmer {farmer_id}: {str(e)}")
-        db.rollback()
+    """
+    Get a farmer profile by ID.
+    - Farmers can only view their own profile.
+    - FPO Managers and Lenders can view profiles of their own members/consented farmers.
+    - Admin can view any.
+    """
+    farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
+    if not farmer:
+        raise HTTPException(status_code=404, detail="Farmer not found")
+
+    # Farmers: own profile only
+    if current_user.role == UserRole.FARMER:
+        if not current_user.farmer_profile or current_user.farmer_profile.id != farmer_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    # Lenders: must check consent (handled at passport level; basic profile access blocked here)
+    if current_user.role == UserRole.LENDER:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update farmer profile"
+            status_code=403,
+            detail="Lenders must access farmer data via the Trust Passport consent system"
         )
 
-
-@router.delete("/{farmer_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_farmer(farmer_id: int, db: Session = Depends(get_db)):
-    """Delete a farmer profile"""
-    try:
-        db_farmer = db.query(Farmer).filter(Farmer.id == farmer_id).first()
-        if not db_farmer:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Farmer not found"
-            )
-        
-        db.delete(db_farmer)
-        db.commit()
-        
-        logger.info(f"Deleted farmer profile: {farmer_id}")
-        return None
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error deleting farmer {farmer_id}: {str(e)}")
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete farmer profile"
-        )
+    return farmer

@@ -1,0 +1,23 @@
+{
+  "model_name": "market_price_rf_v1",
+  "model_version": "1.0-demo",
+  "algorithm": "RandomForestRegressor",
+  "trained_at": "2026-09-12T15:06:07.960017",
+  "training_data_source": "DEMO/SYNTHETIC \u2014 not real AGMARKNET data",
+  "feature_list": [
+    "lag_1",
+    "lag_7",
+    "lag_14",
+    "rolling_mean_4w",
+    "rolling_std_4w",
+    "rolling_mean_8w",
+    "price_trend_4w",
+    "crop_encoded",
+    "week"
+  ],
+  "test_mae_inr": 42.22,
+  "test_r2": 0.999,
+  "important_note": "Trained on synthetic data. Do not cite accuracy as real-world performance.",
+  "prediction_target": "regional_commodity_modal_price",
+  "what_this_is_not": "NOT individual farmer default prediction"
+}
