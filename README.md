@@ -1,210 +1,155 @@
-# Farmer Trust Passport API
+# KisanSetu — Farmer Trust Passport
+**IBM National Hackathon 2026 Finals | Team APEX_034**
 
-Portable Agricultural Economic Identity standard enabling farmers to leverage verified production and community participation for transparent credit access while retaining complete data ownership and control.
+> Portable Agricultural Economic Identity for transparent credit access.
+> The farmer owns the data. The FPO verifies. The lender decides. KisanSetu explains.
 
-## Product Vision
+---
 
-Establish Farmer Trust Passport as the portable Agricultural Economic Identity standard enabling farmers to leverage verified production and community participation for transparent credit access while retaining complete data ownership and control.
+## Quick Start
 
-## Target Audience
-
-- **Primary Users**: Smallholder farmers and FPOs (Farmer Producer Organizations) seeking transparent credit access
-- **Secondary Users**: Rural banks, NBFCs (Non-Banking Financial Companies), and cooperatives requiring verified borrower assessment and reduced information costs
-
-## Core Features
-
-- **Farmer Profile Management**: Create, read, update, and delete farmer profiles with agricultural data
-- **Production Records**: Track and verify agricultural production history
-- **Credit Applications**: Manage loan applications with transparent status tracking
-- **Verification System**: Verify farmer identity, production records, and FPO membership
-
-## Technology Stack
-
-- **Backend Framework**: FastAPI (Python)
-- **Database**: SQLAlchemy ORM (SQLite for development, PostgreSQL/MySQL for production)
-- **Data Validation**: Pydantic
-- **Architecture**: Modular Monolith with clear separation of concerns
-
-## Prerequisites
-
-- Python 3.8 or higher
-- pip (Python package manager)
-
-## Installation
-
-1. **Clone the repository** (or navigate to the project directory)
-
-2. **Create a virtual environment**:
-   ```bash
-   python -m venv venv
-   ```
-
-3. **Activate the virtual environment**:
-   - On Linux/Mac:
-     ```bash
-     source venv/bin/activate
-     ```
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
-
-4. **Install dependencies**:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
-
-5. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` file and update the configuration values, especially:
-   - `SECRET_KEY`: Use a strong random string for production
-   - `DATABASE_URL`: Configure your database connection
-
-## Running the Application
-
-### Development Mode
-
-Run the application with auto-reload enabled:
-
+### Backend
 ```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+# From project root
+.\backend\venv_new\Scripts\python.exe -m uvicorn backend.main:app --reload --port 8000
+
+# Seed demo data (first time)
+.\backend\venv_new\Scripts\python.exe -m backend.seed_demo
+
+# Run tests
+.\backend\venv_new\Scripts\python.exe -m pytest tests/ -v
 ```
 
-The API will be available at: `http://localhost:8000`
-
-### Production Mode
-
-For production deployment:
-
+### Frontend
 ```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
+cd frontend
+npm install
+npm run dev   # http://localhost:5173
 ```
 
-## API Documentation
+### ML
+```bash
+# Train market price model
+.\backend\venv_new\Scripts\python.exe ml\train_market_model.py
+```
 
-Once the application is running, access the interactive API documentation:
+---
 
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+## Demo Credentials (password: `Demo@1234` for all)
 
-## API Endpoints
+| Role | Email |
+|------|-------|
+| 🌾 Farmer | farmer@kisansetu.demo |
+| 🤝 FPO Manager | fpo@kisansetu.demo |
+| 🏦 Lender | lender@kisansetu.demo |
+| ⚙️ Admin | admin@kisansetu.demo |
 
-### Farmers
-- `POST /api/v1/farmers/` - Create a new farmer profile
-- `GET /api/v1/farmers/` - List all farmers (with pagination)
-- `GET /api/v1/farmers/{farmer_id}` - Get a specific farmer
-- `PUT /api/v1/farmers/{farmer_id}` - Update a farmer profile
-- `DELETE /api/v1/farmers/{farmer_id}` - Delete a farmer profile
+---
 
-### Credit Applications
-- `POST /api/v1/credit/` - Create a new credit application
-- `GET /api/v1/credit/` - List credit applications (with filters)
-- `GET /api/v1/credit/{application_id}` - Get a specific application
-- `PUT /api/v1/credit/{application_id}` - Update application status
-- `DELETE /api/v1/credit/{application_id}` - Delete an application
+## The Six Demo Questions
 
-### Verifications
-- `POST /api/v1/verification/` - Create a new verification request
-- `GET /api/v1/verification/` - List verifications (with filters)
-- `GET /api/v1/verification/{verification_id}` - Get a specific verification
-- `PUT /api/v1/verification/{verification_id}` - Update verification status
-- `DELETE /api/v1/verification/{verification_id}` - Delete a verification
+| # | Question | Answer |
+|---|----------|--------|
+| 1 | Who is a trustworthy borrower? | Trust Passport + Overall Creditworthiness (Arjun Patel: **83.8/100**) |
+| 2 | How much credit can safely be extended? | Safe Credit Limit: **₹2,32,200** (formula-based) |
+| 3 | What should the credit be used for? | Recommended: seeds, fertilizer, irrigation |
+| 4 | Can the farmer repay? | Net Income ₹2.45L, Repayment Coverage shown |
+| 5 | How does the community reduce risk? | FPO verified 3 records; membership since 2022 |
+| 6 | How does the farmer retain control? | Consent Management + hash-chained Data Access History |
 
-## Database
-
-The application uses SQLAlchemy ORM with support for multiple databases:
-
-- **Development**: SQLite (default, no setup required)
-- **Production**: PostgreSQL or MySQL (recommended)
-
-### Database Models
-
-- **Farmer**: Core farmer profile with agricultural data
-- **ProductionRecord**: Historical production data
-- **CreditApplication**: Loan application tracking
-- **Verification**: Identity and data verification records
-
-### Database Initialization
-
-The database tables are automatically created on application startup. For SQLite, the database file will be created in the project root directory.
-
-## Configuration
-
-Key configuration options in `.env`:
-
-- `DATABASE_URL`: Database connection string
-- `SECRET_KEY`: Secret key for security features
-- `ALLOWED_ORIGINS`: CORS allowed origins (comma-separated)
-- `DEFAULT_PAGE_SIZE`: Default pagination size (default: 20)
-- `MAX_PAGE_SIZE`: Maximum pagination size (default: 100)
+---
 
 ## Architecture
 
-The application follows a **Modular Monolith** architecture:
-
 ```
 backend/
-├── main.py              # Application entry point
-├── config.py            # Configuration management
-├── database.py          # Database setup and session management
-├── models.py            # SQLAlchemy database models
-├── schemas.py           # Pydantic schemas for validation
-└── routers/             # API route handlers
-    ├── farmers.py       # Farmer management endpoints
-    ├── credit.py        # Credit application endpoints
-    └── verification.py  # Verification endpoints
+├── main.py                  # FastAPI app, all routers registered
+├── models.py                # SQLAlchemy ORM (15 tables)
+├── schemas.py               # Pydantic v2 request/response models
+├── config.py                # Settings (scoring weights etc.)
+├── database.py              # SQLite engine + session
+├── auth/
+│   ├── security.py          # JWT, bcrypt
+│   └── dependencies.py      # get_current_user, role guards
+├── routers/
+│   ├── auth.py              # register, login, /me
+│   ├── farmers.py           # farmer profile CRUD
+│   ├── farms.py             # farms, crop seasons, production, sales
+│   ├── credit.py            # credit applications
+│   ├── verification.py      # verification CRUD
+│   ├── fpo.py               # FPO management + verification
+│   ├── passport.py          # Trust Passport + What-If
+│   ├── consent.py           # consent grant/revoke + access history
+│   ├── lender.py            # lender portal (consent-gated)
+│   └── ml_router.py         # ML market price forecast
+├── services/
+│   ├── passport_engine.py   # 5-component transparent scorecard
+│   └── market_intelligence.py  # AGMARKNET/NHB/PMFBY data service
+└── seed_demo.py             # Demo data seeder
+
+ml/
+├── train_market_model.py    # RF price model training
+├── predict.py               # inference interface
+├── data/agmarknet_demo.csv  # DEMO/SYNTHETIC dataset
+└── models/                  # trained model + metadata
+
+frontend/src/
+├── pages/
+│   ├── Login.jsx
+│   ├── FarmerDashboard.jsx
+│   ├── TrustPassport.jsx    # Main demo screen
+│   ├── WhatIf.jsx           # Slider-based simulator
+│   ├── ConsentManagement.jsx
+│   ├── DataAccessHistory.jsx
+│   ├── FPODashboard.jsx
+│   ├── LenderDashboard.jsx
+│   └── CreditApplication.jsx
+└── components/
+    ├── Layout.jsx
+    └── ScoreBar.jsx
+
+tests/
+├── test_auth.py             # registration, login, JWT
+├── test_passport.py         # scoring formula, safe credit limit
+├── test_consent_lender.py   # consent enforcement, what-if mutation guard
+└── test_hash_chain.py       # tamper-evident log verification
 ```
 
-### Key Design Principles
+---
 
-- **Separation of Concerns**: Clear boundaries between routes, models, and schemas
-- **Data Validation**: Pydantic schemas for request/response validation
-- **Error Handling**: Comprehensive error handling with meaningful messages
-- **Logging**: Structured logging for debugging and monitoring
-- **Security**: Input validation, SQL injection prevention via ORM
+## Trust Passport Formula
 
-## Development
+```
+Overall = 0.25 × Production Stability
+        + 0.20 × Market Stability
+        + 0.25 × Repayment Capacity
+        + 0.15 × Agricultural Risk
+        + 0.15 × FPO Community
 
-### Code Structure
+Safe Credit Limit = Acreage × NHB Benchmark Yield × Conservative AGMARKNET Price × Risk Haircut
 
-- **Models** (`models.py`): Database table definitions using SQLAlchemy
-- **Schemas** (`schemas.py`): Request/response validation using Pydantic
-- **Routers** (`routers/`): API endpoint implementations
-- **Config** (`config.py`): Centralized configuration management
+Risk Haircut:  90–100 → 1.00  |  75–89 → 0.90  |  60–74 → 0.75  |  45–59 → 0.60  |  <45 → 0.45
+```
 
-### Adding New Features
+---
 
-1. Define database model in `models.py`
-2. Create Pydantic schemas in `schemas.py`
-3. Implement API routes in `routers/`
-4. Register router in `main.py`
+## API Docs
+After starting backend: http://localhost:8000/docs
 
-## Security Considerations
+---
 
-- All passwords and secrets should be stored in environment variables
-- Use strong random strings for `SECRET_KEY` in production
-- Enable HTTPS in production deployments
-- Implement rate limiting for production use
-- Regular security updates for dependencies
+## Important Caveats
+- Market/benchmark data is **DEMO/SYNTHETIC** — not live government data
+- ML model trained on synthetic data — **do not cite accuracy as real-world**
+- FPO membership is a **verification/trust layer only** — FPO does NOT guarantee loans
+- KisanSetu provides an **explainable assessment** — the lender makes the final decision
+- No individual farmer default prediction is performed
 
-## Deployment
+---
 
-For production deployment:
-
-1. Use PostgreSQL or MySQL instead of SQLite
-2. Set `DEBUG=False` in environment variables
-3. Use a strong random `SECRET_KEY`
-4. Configure proper CORS origins
-5. Use a production ASGI server (uvicorn with workers)
-6. Set up proper logging and monitoring
-7. Implement backup strategies for the database
-
-## Support
-
-For issues, questions, or contributions, please refer to the project documentation or contact the development team.
-
-## License
-
-[Specify your license here]
+## What Remains for ML Phase
+- Connect real AGMARKNET CSV from data.gov.in
+- Connect real NHB benchmark data
+- Train on multi-year historical price data
+- Add risk model with real PMFBY district data
+- Integrate forecast confidence intervals into passport
