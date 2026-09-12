@@ -1,210 +1,127 @@
-# Farmer Trust Passport API
+# Kisan Setu — Farmer Trust Passport Baseline
 
-Portable Agricultural Economic Identity standard enabling farmers to leverage verified production and community participation for transparent credit access while retaining complete data ownership and control.
+A functional monolithic baseline for **Kisan Setu**: farmers build a portable agricultural
+economic identity (the Trust Passport), FPOs verify them, and banks get consent-gated views
+with attribute masking. No external data integrations — all crop yields and benchmark prices
+are internal mock configurations.
 
-## Product Vision
+## Stack
 
-Establish Farmer Trust Passport as the portable Agricultural Economic Identity standard enabling farmers to leverage verified production and community participation for transparent credit access while retaining complete data ownership and control.
+- **Backend**: FastAPI + SQLAlchemy 2.0 + Pydantic v2 (SQLite in dev, PostgreSQL-ready)
+- **Frontend**: React SPA + Vite + Tailwind CSS with role-based navigation (Farmer, FPO, Bank)
+- **Credit Engine**: deterministic pure-Python service (no randomness, no third-party APIs)
 
-## Target Audience
-
-- **Primary Users**: Smallholder farmers and FPOs (Farmer Producer Organizations) seeking transparent credit access
-- **Secondary Users**: Rural banks, NBFCs (Non-Banking Financial Companies), and cooperatives requiring verified borrower assessment and reduced information costs
-
-## Core Features
-
-- **Farmer Profile Management**: Create, read, update, and delete farmer profiles with agricultural data
-- **Production Records**: Track and verify agricultural production history
-- **Credit Applications**: Manage loan applications with transparent status tracking
-- **Verification System**: Verify farmer identity, production records, and FPO membership
-
-## Technology Stack
-
-- **Backend Framework**: FastAPI (Python)
-- **Database**: SQLAlchemy ORM (SQLite for development, PostgreSQL/MySQL for production)
-- **Data Validation**: Pydantic
-- **Architecture**: Modular Monolith with clear separation of concerns
-
-## Prerequisites
-
-- Python 3.8 or higher
-- pip (Python package manager)
-
-## Installation
-
-1. **Clone the repository** (or navigate to the project directory)
-
-2. **Create a virtual environment**:
-   ```bash
-   python -m venv venv
-   ```
-
-3. **Activate the virtual environment**:
-   - On Linux/Mac:
-     ```bash
-     source venv/bin/activate
-     ```
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
-
-4. **Install dependencies**:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
-
-5. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` file and update the configuration values, especially:
-   - `SECRET_KEY`: Use a strong random string for production
-   - `DATABASE_URL`: Configure your database connection
-
-## Running the Application
-
-### Development Mode
-
-Run the application with auto-reload enabled:
-
-```bash
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-The API will be available at: `http://localhost:8000`
-
-### Production Mode
-
-For production deployment:
-
-```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
-```
-
-## API Documentation
-
-Once the application is running, access the interactive API documentation:
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-## API Endpoints
-
-### Farmers
-- `POST /api/v1/farmers/` - Create a new farmer profile
-- `GET /api/v1/farmers/` - List all farmers (with pagination)
-- `GET /api/v1/farmers/{farmer_id}` - Get a specific farmer
-- `PUT /api/v1/farmers/{farmer_id}` - Update a farmer profile
-- `DELETE /api/v1/farmers/{farmer_id}` - Delete a farmer profile
-
-### Credit Applications
-- `POST /api/v1/credit/` - Create a new credit application
-- `GET /api/v1/credit/` - List credit applications (with filters)
-- `GET /api/v1/credit/{application_id}` - Get a specific application
-- `PUT /api/v1/credit/{application_id}` - Update application status
-- `DELETE /api/v1/credit/{application_id}` - Delete an application
-
-### Verifications
-- `POST /api/v1/verification/` - Create a new verification request
-- `GET /api/v1/verification/` - List verifications (with filters)
-- `GET /api/v1/verification/{verification_id}` - Get a specific verification
-- `PUT /api/v1/verification/{verification_id}` - Update verification status
-- `DELETE /api/v1/verification/{verification_id}` - Delete a verification
-
-## Database
-
-The application uses SQLAlchemy ORM with support for multiple databases:
-
-- **Development**: SQLite (default, no setup required)
-- **Production**: PostgreSQL or MySQL (recommended)
-
-### Database Models
-
-- **Farmer**: Core farmer profile with agricultural data
-- **ProductionRecord**: Historical production data
-- **CreditApplication**: Loan application tracking
-- **Verification**: Identity and data verification records
-
-### Database Initialization
-
-The database tables are automatically created on application startup. For SQLite, the database file will be created in the project root directory.
-
-## Configuration
-
-Key configuration options in `.env`:
-
-- `DATABASE_URL`: Database connection string
-- `SECRET_KEY`: Secret key for security features
-- `ALLOWED_ORIGINS`: CORS allowed origins (comma-separated)
-- `DEFAULT_PAGE_SIZE`: Default pagination size (default: 20)
-- `MAX_PAGE_SIZE`: Maximum pagination size (default: 100)
-
-## Architecture
-
-The application follows a **Modular Monolith** architecture:
+## Repository Layout
 
 ```
 backend/
-├── main.py              # Application entry point
-├── config.py            # Configuration management
-├── database.py          # Database setup and session management
-├── models.py            # SQLAlchemy database models
-├── schemas.py           # Pydantic schemas for validation
-└── routers/             # API route handlers
-    ├── farmers.py       # Farmer management endpoints
-    ├── credit.py        # Credit application endpoints
-    └── verification.py  # Verification endpoints
+  .env                     # environment configuration (create from .env.example)
+  requirements.txt
+  app/
+    main.py                # FastAPI entry point (uvicorn app.main:app)
+    seed.py                # creates demo FPO + Bank accounts
+    core/                  # config, database, security, mock market data
+    models/                # User, Farmer, FPOVerification, TrustPassport, ConsentLog
+    schemas/               # Pydantic request/response models
+    services/              # credit engine + consent-gated bank view (masking)
+    api/
+      deps.py              # auth dependencies (Bearer token, role guards)
+      routes/              # auth, farmers, fpo, passports, consents, bank
+frontend/
+  src/
+    api.js                 # axios client with token interceptor
+    context/AuthContext.jsx
+    components/Navbar.jsx, ScoreBar.jsx
+    pages/Login.jsx, Register.jsx, FarmerDashboard.jsx, FPODashboard.jsx, BankDashboard.jsx
 ```
 
-### Key Design Principles
+## Quick Start
 
-- **Separation of Concerns**: Clear boundaries between routes, models, and schemas
-- **Data Validation**: Pydantic schemas for request/response validation
-- **Error Handling**: Comprehensive error handling with meaningful messages
-- **Logging**: Structured logging for debugging and monitoring
-- **Security**: Input validation, SQL injection prevention via ORM
+### 1. Backend
 
-## Development
+```bash
+cd backend
+python -m venv venv
+venv\Scripts\activate          # Windows  |  source venv/bin/activate  (Linux/macOS)
+pip install -r requirements.txt
+python -m app.seed             # optional: demo FPO + Bank logins
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
 
-### Code Structure
+- API docs: http://127.0.0.1:8000/docs
+- `backend/.env` already exists for dev. For real deployments copy `.env.example` and set a
+  strong `SECRET_KEY` and your `DATABASE_URL` (PostgreSQL/MySQL).
 
-- **Models** (`models.py`): Database table definitions using SQLAlchemy
-- **Schemas** (`schemas.py`): Request/response validation using Pydantic
-- **Routers** (`routers/`): API endpoint implementations
-- **Config** (`config.py`): Centralized configuration management
+### 2. Frontend
 
-### Adding New Features
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-1. Define database model in `models.py`
-2. Create Pydantic schemas in `schemas.py`
-3. Implement API routes in `routers/`
-4. Register router in `main.py`
+Open http://localhost:3000. Vite proxies `/api` and `/uploads` to the backend on :8000.
 
-## Security Considerations
+## Demo Accounts
 
-- All passwords and secrets should be stored in environment variables
-- Use strong random strings for `SECRET_KEY` in production
-- Enable HTTPS in production deployments
-- Implement rate limiting for production use
-- Regular security updates for dependencies
+| Role   | Username      | Password   |
+| ------ | ------------- | ---------- |
+| Farmer | (any 10-digit mobile you register) | chosen at registration |
+| FPO    | `fpo_krishak` | `demo@1234` |
+| Bank   | `bank_gramin` | `demo@1234` |
 
-## Deployment
+## Credit Engine
 
-For production deployment:
+Pure Python, fully deterministic:
 
-1. Use PostgreSQL or MySQL instead of SQLite
-2. Set `DEBUG=False` in environment variables
-3. Use a strong random `SECRET_KEY`
-4. Configure proper CORS origins
-5. Use a production ASGI server (uvicorn with workers)
-6. Set up proper logging and monitoring
-7. Implement backup strategies for the database
+```
+Safe Credit Limit   = Acreage * Yield_per_acre * Benchmark_price * (1 - Risk Haircut)
+Repayment Coverage  = Net Income / Repayment Demand
+```
 
-## Support
+- **Yield & price**: internal mock table in `app/core/market.py` (paddy, wheat, cotton, maize, ...).
+- **Risk haircut**: base 20%; 15% when FPO-verified with member integrity, 35% when rejected.
+- **Six component scores** (0–100): identity, landholding, production, verification, repayment, stability.
+- Execution: `POST /api/v1/passports/compute/{farmer_id}` stores the result in `TrustPassport`.
 
-For issues, questions, or contributions, please refer to the project documentation or contact the development team.
+## Key API Endpoints
 
-## License
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| POST | `/api/v1/auth/register/farmer` | Register farmer + login account |
+| POST | `/api/v1/auth/register/fpo` / `/bank` | Register FPO / bank account |
+| POST | `/api/v1/auth/login` | Obtain JWT (`role` in payload) |
+| GET/PUT/DELETE | `/api/v1/farmers/{id}` | Farmer profile CRUD |
+| POST | `/api/v1/fpo/verifications` | FPO submits a verification |
+| PUT | `/api/v1/fpo/verifications/{id}` | Update status + member integrity flag |
+| POST | `/api/v1/passports/compute/{farmer_id}` | Trigger deterministic credit calculation |
+| GET | `/api/v1/passports/{farmer_id}` | Latest Trust Passport |
+| POST | `/api/v1/consents` | Farmer grants a bank access (attributes + masking) |
+| PUT | `/api/v1/consents/{id}` | Grant / revoke consent |
+| GET | `/api/v1/bank/farmers/{farmer_id}/view` | Consent-gated, masked bank view |
 
-[Specify your license here]
+## Workflow
+
+1. **Farmer** registers → identity + landholding (`acreage`) + crop season.
+2. **FPO** logs in, submits a verification, sets the `member_integrity_flag`.
+3. **Farmer** triggers the credit engine → Trust Passport with safe credit limit and 6 scores.
+4. **Farmer** grants a bank consent, selecting attributes and which ones to mask.
+5. **Bank** opens `.../view` and sees only the consented (and masked) attributes
+   (e.g. `mobile` → `xxxxxx3210`). Revoking consent blocks the bank immediately (403).
+
+## Security Notes
+
+- Passwords hashed with bcrypt; short-lived JWT with role claim; role-guarded endpoints.
+- Bank access is strictly consent-gated and revoked consents return 403.
+- `.env` is git-ignored; never commit real secrets. Use `.env.example` for provisioning.
+
+## Testing
+
+Backend is exercised end-to-end via an integration harness (register → verify → compute →
+consent → view → revoke). Example:
+
+```bash
+python -m app.seed
+```
+
+then drive the API through Swagger at http://127.0.0.1:8000/docs or the React UI at :3000.

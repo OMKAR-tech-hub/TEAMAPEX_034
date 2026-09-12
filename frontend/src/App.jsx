@@ -1,52 +1,60 @@
-import { Routes, Route, NavLink, useNavigate } from 'react-router-dom'
-import Register from './pages/Register.jsx'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { useAuth } from './context/AuthContext.jsx'
+import Navbar from './components/Navbar.jsx'
 import Login from './pages/Login.jsx'
-import Profile from './pages/Profile.jsx'
+import Register from './pages/Register.jsx'
+import FarmerDashboard from './pages/FarmerDashboard.jsx'
+import FPODashboard from './pages/FPODashboard.jsx'
+import BankDashboard from './pages/BankDashboard.jsx'
 
-function Nav() {
-  const navigate = useNavigate()
-  const farmer = JSON.parse(localStorage.getItem('farmer') || 'null')
+function RequireRole({ role, children }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== role) return <Navigate to={`/${user.role}`} replace />
+  return children
+}
 
-  const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('farmer')
-    navigate('/login')
-  }
-
-  return (
-    <nav className="nav">
-      <NavLink to="/" className="brand">
-        Kisansetu
-      </NavLink>
-      <div>
-        {farmer ? (
-          <>
-            <NavLink to="/profile">Profile</NavLink>
-            <a href="#" onClick={logout}>
-              Logout
-            </a>
-          </>
-        ) : (
-          <>
-            <NavLink to="/register">Register</NavLink>
-            <NavLink to="/login">Login</NavLink>
-          </>
-        )}
-      </div>
-    </nav>
-  )
+function Home() {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  return <Navigate to={`/${user.role}`} replace />
 }
 
 export default function App() {
+  const { user } = useAuth()
   return (
-    <>
-      <Nav />
+    <div className="min-h-screen">
+      <Navbar />
       <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/farmer"
+          element={
+            <RequireRole role="farmer">
+              <FarmerDashboard />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/fpo"
+          element={
+            <RequireRole role="fpo">
+              <FPODashboard />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/bank"
+          element={
+            <RequireRole role="bank">
+              <BankDashboard />
+            </RequireRole>
+          }
+        />
+        {user && <Route path="*" element={<Navigate to={`/${user.role}`} replace />} />}
       </Routes>
-    </>
+    </div>
   )
 }
